@@ -3,6 +3,9 @@ import PizZip from "pizzip";
 import Docxtemplater from "docxtemplater";
 import { saveAs } from "file-saver";
 
+// Import template directly
+import templateFile from "../../templates/residence-certificate.docx";
+
 const ResidenceCertificate = () => {
   const [formData, setFormData] = useState({
     name: "",
@@ -11,7 +14,6 @@ const ResidenceCertificate = () => {
     email: "",
   });
   const [loading, setLoading] = useState(false);
-  const [template, setTemplate] = useState(null);
   const [error, setError] = useState(null);
 
   const handleInputChange = (e) => {
@@ -22,31 +24,15 @@ const ResidenceCertificate = () => {
     }));
   };
 
-  const handleTemplateUpload = (e) => {
-    const file = e.target.files[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        const content = e.target.result;
-        setTemplate(content);
-        setError(null);
-      };
-      reader.onerror = () => {
-        setError("Error reading the template file");
-      };
-      reader.readAsBinaryString(file);
-    }
-  };
-
   const generateDocument = async () => {
-    if (!template) {
-      setError("Please upload a template first");
-      return;
-    }
-
     try {
+      // Fetch the template file
+      const response = await fetch(templateFile);
+      const templateBlob = await response.blob();
+      const templateArrayBuffer = await templateBlob.arrayBuffer();
+
       // Create a new instance of PizZip
-      const zip = new PizZip(template);
+      const zip = new PizZip(templateArrayBuffer);
 
       // Create Docxtemplater instance with error handler
       const doc = new Docxtemplater(zip, {
@@ -54,20 +40,20 @@ const ResidenceCertificate = () => {
         linebreaks: true,
       });
 
-      console.log("Data being rendered:", formData); // Debug log
-
       // Render the document with form data
       doc.render(formData);
 
-      // Generate output
+      // Generate output blob
       const out = doc.getZip().generate({
         type: "blob",
         mimeType:
           "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
       });
 
-      // Trigger download
-      saveAs(out, `generated-document-${formData.name}.docx`);
+      // Save file to downloads
+      const fileName = `generated-document-${formData.name}.docx`;
+      saveAs(out, fileName);
+
       setError(null);
     } catch (error) {
       console.error("Template error:", error);
@@ -158,16 +144,6 @@ const ResidenceCertificate = () => {
     <div style={styles.container}>
       <h1 style={styles.title}>Document Generator</h1>
 
-      <div style={styles.formGroup}>
-        <label style={styles.label}>Upload Template (.docx)</label>
-        <input
-          type="file"
-          accept=".docx"
-          onChange={handleTemplateUpload}
-          style={styles.input}
-        />
-      </div>
-
       <form onSubmit={handleSubmit} style={styles.form}>
         <div style={styles.formGroup}>
           <label style={styles.label}>Full Name</label>
@@ -221,10 +197,9 @@ const ResidenceCertificate = () => {
 
         <button
           type="submit"
-          disabled={loading || !template}
           style={{
             ...styles.button,
-            ...(loading || !template ? styles.disabledButton : {}),
+            ...(loading ? styles.disabledButton : {}),
           }}
         >
           {loading ? "Generating..." : "Generate Document"}
