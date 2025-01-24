@@ -51,7 +51,7 @@ const AppSidebar = () => {
         <NavLink to="/formXVI" activeClassName="active">
           Form XVI
         </NavLink>
-        <NavLink to="/generated-documents" activeClassName="active">
+        <NavLink to="#" activeClassName="active">
           Generated Documents
         </NavLink>
       </nav>
